@@ -29,3 +29,9 @@ pip install -r requirements.txt
 chmod 755 start.sh
 sh start.sh
 ```
+
+I changed the security scheme type OAuth2PasswordBearer to HTTPBearer
+/login return a token which has to be entered when clicking on the "Authorize" button (without "Bearer" string)
+Then it is possible to use the /articles endpoint
+
+Not to pollute your python environment, please use your own virtual env.

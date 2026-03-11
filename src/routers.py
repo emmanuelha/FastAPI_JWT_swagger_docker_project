@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Response, Cookie
 from fastapi.exceptions import RequestValidationError
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from pydantic import ValidationError
@@ -30,7 +30,7 @@ from src.tasks import (
 
 router = APIRouter()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+oauth2_scheme = HTTPBearer()
 
 
 @router.post("/register", response_model=schemas.User)
@@ -127,9 +127,10 @@ async def verify(token: str, db: AsyncSession = Depends(get_db)):
 
 @router.post("/logout", response_model=schemas.SuccessResponseScheme)
 async def logout(
-    token: Annotated[str, Depends(oauth2_scheme)],
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(oauth2_scheme)],
     db: AsyncSession = Depends(get_db),
 ):
+    token = credentials.credentials
     payload = await decode_token_with_blacklisted(token=token, db=db)
     black_listed = models.BlackListToken(
         id=payload[JTI], expire=datetime.fromtimestamp(payload['exp'], tz=timezone.utc)
@@ -178,10 +179,11 @@ async def password_reset_token(
 
 @router.post("/password-update", response_model=schemas.SuccessResponseScheme)
 async def password_update(
-    token: Annotated[str, Depends(oauth2_scheme)],
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(oauth2_scheme)],
     data: schemas.PasswordUpdateSchema,
     db: AsyncSession = Depends(get_db),
 ):
+    token = credentials.credentials
     payload = await decode_token_with_blacklisted(token=token, db=db)
     user = await models.User.find_by_id(db=db, id=payload[SUB])
     if not user:
@@ -201,9 +203,10 @@ async def password_update(
 
 @router.get("/articles")
 async def articles(
-    token: Annotated[str, Depends(oauth2_scheme)],
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(oauth2_scheme)],
     db: AsyncSession = Depends(get_db),
 ):
+    token = credentials.credentials
     payload = await decode_token_with_blacklisted(token=token, db=db)
     user = await models.User.find_by_id(db=db, id=payload[SUB])
     if not user:
@@ -216,10 +219,11 @@ async def articles(
 
 @router.post("/articles", response_model=schemas.SuccessResponseScheme, status_code=201)
 async def article_create(
-    token: Annotated[str, Depends(oauth2_scheme)],
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(oauth2_scheme)],
     data: schemas.ArticleCreateSchema,
     db: AsyncSession = Depends(get_db),
 ):
+    token = credentials.credentials
     payload = await decode_token_with_blacklisted(token=token, db=db)
     user = await models.User.find_by_id(db=db, id=payload[SUB])
     if not user:
